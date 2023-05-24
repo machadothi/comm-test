@@ -7,7 +7,6 @@
 #include <string>
 #include <thread>
 
-#include "SerialModule.h"
 #include "SerialComm.h"
 #include "CommFactory.h"
 
