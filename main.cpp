@@ -8,6 +8,8 @@
 #include <thread>
 
 #include "SerialModule.h"
+#include "SerialComm.h"
+#include "CommFactory.h"
 
 //---------------------------------------------------------------------------------
 struct bus_monitor {
@@ -44,7 +46,7 @@ float calc_fail_rate(unsigned int fail_bytes, unsigned int total_bytes) {
 }
 
 //------------------------------------------------------------------------------
-void write_port(SerialModule &serial) {
+void write_port(IComm_ptr &serial) {
   char data[1024];
   ssize_t write_size = 0;
   auto writer_timer_start = std::chrono::steady_clock::now();
@@ -55,7 +57,7 @@ void write_port(SerialModule &serial) {
   }
 
   auto safe_write = [&serial, &data]() {
-    return serial.write(data, sizeof(data), 1000);
+    return serial->write(data, sizeof(data), 1000);
   };
 
   while (true) {
@@ -78,7 +80,7 @@ void write_port(SerialModule &serial) {
 }
 
 //------------------------------------------------------------------------------
-void read_port(SerialModule &serial, std::mutex &mtx_mon) {
+void read_port(IComm_ptr &serial, std::mutex &mtx_mon) {
 
   char buf[1024];
   static ssize_t buff_size;
@@ -87,7 +89,7 @@ void read_port(SerialModule &serial, std::mutex &mtx_mon) {
 
   auto safe_read = [&serial, &buf]() {
     // return serial.read(buf, sizeof(buf), 1000);
-    return serial.read(buf, sizeof(buf));
+    return serial->read(buf, sizeof(buf), 1000);
   };
 
   while (true) {
@@ -191,53 +193,6 @@ void bus_monitor(std::mutex &mtx_mon) {
 }
 
 //---------------------------------------------------------------------------------
-
-int get_baud(int baud)
-{
-    switch (baud) {
-    case 9600:
-        return B9600;
-    case 19200:
-        return B19200;
-    case 38400:
-        return B38400;
-    case 57600:
-        return B57600;
-    case 115200:
-        return B115200;
-    case 230400:
-        return B230400;
-    case 460800:
-        return B460800;
-    case 500000:
-        return B500000;
-    case 576000:
-        return B576000;
-    case 921600:
-        return B921600;
-    case 1000000:
-        return B1000000;
-    case 1152000:
-        return B1152000;
-    case 1500000:
-        return B1500000;
-    case 2000000:
-        return B2000000;
-    case 2500000:
-        return B2500000;
-    case 3000000:
-        return B3000000;
-    case 3500000:
-        return B3500000;
-    case 4000000:
-        return B4000000;
-    default: 
-        std::cout << "Wrong Parameters!!" << std::endl;
-        return -1;
-    }
-}
-
-//---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 
   // argv[1] = device name e.g. /dev/ttyUSB0
@@ -248,34 +203,23 @@ int main(int argc, char **argv) {
 
   std::string my_device = argv[1];
 
-  speed_t my_bd = std::stoi(argv[2]);
+  uint32_t bd = std::stoi(argv[2]);
 
   if (argc >= 4) {
       sw_loop = bool(std::stoi(argv[3]));
   }
 
+  auto serial = create_comm_device(CommDevice::UART);
 
-  SerialModule my_serial_port(my_device.c_str(), get_baud(my_bd), sw_loop);
+  serial->connect(my_device.c_str(), bd, sw_loop);
 
-  //---------------------------------------------------------------------------------
-  // THREAD
   std::mutex my_bus_mtx;
 
   std::mutex my_mon_mtx;
 
-  auto start = std::chrono::steady_clock::now();
-  auto end = std::chrono::steady_clock::now();
-  auto int_ms = std::chrono::duration_cast<std::chrono::milliseconds>(start - end);
-  auto delta = end - start;
+  std::thread writer(write_port, std::ref(serial));
 
-  if (!my_serial_port.open()) {
-    std::cout << "Fail to open serial port." << std::endl;
-    return 0;
-  }
-
-  std::thread writer(write_port, std::ref(my_serial_port));
-
-  std::thread reader(read_port, std::ref(my_serial_port), std::ref(my_mon_mtx));
+  std::thread reader(read_port, std::ref(serial), std::ref(my_mon_mtx));
 
   std::thread monitor(bus_monitor, std::ref(my_mon_mtx));
 

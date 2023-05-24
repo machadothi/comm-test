@@ -56,16 +56,16 @@ bool SerialModule::open() {
             st.c_cflag &= ~CSIZE;
             st.c_cflag |= CS8;
             
-            // ignora linhas do modem e habilita receiver
+            // ignores modem lines and enables receiver
             st.c_cflag |= (CLOCAL | CREAD);
             
-            // desabilita software flow control
+            // disable software flow control
             st.c_iflag &= ~(IXON | IXOFF | IXANY);
             
-            // desabilita conversao do LF e CR
+            // disable conversao do LF e CR
             st.c_iflag &= ~(INLCR | ICRNL | IGNCR);
             
-            // desabilita canonical input
+            // disable canonical input
             st.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
             
             // raw output
