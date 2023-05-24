@@ -1,14 +1,14 @@
-#include "SerialComm.h"
-
 #include <iomanip>
 #include <iostream>
-#include<cstring>
+#include <cstring>
 #include <cerrno>
 
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+
+#include "SerialComm.h"
 
 #define TIOCM_LOOP      0x8000
 
